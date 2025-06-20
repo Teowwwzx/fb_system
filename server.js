@@ -35,6 +35,11 @@ testDbConnection();
 app.use(cors()); // Enable Cross-Origin Resource Sharing
 app.use(express.json()); // Allow the server to accept JSON in request bodies
 
+// Root endpoint to confirm the API is running
+app.get('/', (req, res) => {
+  res.status(200).json({ message: 'Welcome to the FB System API. The service is up and running.' });
+});
+
 // --- Mock Data (for demonstration) ---
 // In a real app, this would come from your database
 const mockAgents = [
