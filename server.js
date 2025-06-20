@@ -1,11 +1,35 @@
 // Import necessary packages
+require('dotenv').config(); // Load environment variables from .env file
 const express = require('express');
+const { Pool } = require('pg'); // PostgreSQL client
+const { initializeDatabase } = require('./db_setup'); // Import DB setup functions
 const cors = require('cors');
+const bcrypt = require('bcrypt');
 require('dotenv').config();
 
 // Initialize the Express app
 const app = express();
 const PORT = process.env.PORT || 5001; // Use port from .env or default to 5001
+
+// PostgreSQL Connection Pool
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' || (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('render.com')) ? { rejectUnauthorized: false } : false, // Enable SSL for Render
+});
+
+// Test DB Connection
+async function testDbConnection() {
+  try {
+    const client = await pool.connect();
+    console.log('Successfully connected to PostgreSQL database!');
+    const res = await client.query('SELECT NOW()');
+    console.log('Current time from DB:', res.rows[0].now);
+    client.release();
+  } catch (err) {
+    console.error('Error connecting to PostgreSQL database:', err.stack);
+  }
+}
+testDbConnection();
 
 // Middleware
 app.use(cors()); // Enable Cross-Origin Resource Sharing
@@ -244,7 +268,97 @@ app.post('/api/reports/sales', (req, res) => {
     res.json(mockSalesReport);
 });
 
-// --- Start the Server ---
-app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+// API Endpoint for User Registration
+app.post('/api/register', async (req, res) => {
+    const { username, password, role } = req.body; // role should be the role_name like 'admin'
+
+    if (!username || !password || !role) {
+        return res.status(400).json({ message: 'Username, password, and role are required.' });
+    }
+
+    try {
+        // 1. Hash the password
+        const saltRounds = 10;
+        const passwordHash = await bcrypt.hash(password, saltRounds);
+
+        // 2. Get the role_id from the role_name
+        const roleResult = await pool.query('SELECT role_id FROM roles WHERE role_name = $1', [role]);
+        if (roleResult.rows.length === 0) {
+            return res.status(400).json({ message: 'Invalid role specified.' });
+        }
+        const roleId = roleResult.rows[0].role_id;
+
+        // 3. Insert the new user into the database
+        const newUser = await pool.query(
+            'INSERT INTO users (username, password_hash, role_id) VALUES ($1, $2, $3) RETURNING user_id, username, created_at',
+            [username, passwordHash, roleId]
+        );
+
+        console.log('New user registered:', newUser.rows[0]);
+        res.status(201).json({ 
+            message: 'User registered successfully!', 
+            user: newUser.rows[0] 
+        });
+
+    } catch (err) {
+        if (err.code === '23505') { // Unique violation error code for PostgreSQL
+            return res.status(409).json({ message: 'Username already exists.' });
+        }
+        console.error('Error during registration:', err.stack);
+        res.status(500).json({ message: 'Internal server error' });
+    }
 });
+
+// --- Login Endpoint ---
+app.post('/api/login', async (req, res) => {
+  const { username, password } = req.body;
+
+  if (!username || !password) {
+    return res.status(400).json({ message: 'Username and password are required' });
+  }
+
+  try {
+    // Fetch user from the database
+    const userResult = await pool.query('SELECT u.user_id, u.username, u.password_hash, r.role_name FROM users u JOIN roles r ON u.role_id = r.role_id WHERE u.username = $1', [username]);
+
+    if (userResult.rows.length === 0) {
+      return res.status(401).json({ message: 'Invalid username or password' });
+    }
+
+    const user = userResult.rows[0];
+
+    // Compare the provided password with the stored hash
+    const isMatch = await bcrypt.compare(password, user.password_hash);
+
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Invalid username or password' });
+    }
+
+    // Login successful
+    // For now, just send back user info (excluding password hash)
+    // In a real app, you'd generate a JWT here
+    res.status(200).json({
+      message: 'Login successful',
+      user: {
+        user_id: user.user_id,
+        username: user.username,
+        role: user.role_name
+      }
+    });
+
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ message: 'Server error during login' });
+  }
+});
+
+// --- Start the Server ---
+async function startServer() {
+  await initializeDatabase(); // Ensure DB is set up
+
+  app.listen(PORT, '0.0.0.0', () => {
+        console.log(`Server is running on http://localhost:${PORT}`);
+  });
+}
+
+startServer().catch(err => console.error('Failed to start server:', err));
