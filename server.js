@@ -140,11 +140,24 @@ const agentTreeData = [
 
 // --- API Endpoints ---
 // This is a simple GET endpoint to fetch the list of agents
-app.get('/api/agents', (req, res) => {
-    console.log('Request received for /api/agents', req.query);
-    setTimeout(() => {
-        res.json(mockAgents);
-    }, 500);
+app.get('/api/agents', async (req, res) => {
+  try {
+    const query = `
+      SELECT 
+        user_id,
+        username,
+        name,
+        status,
+        type,
+        last_login_at AS "lastLogin" 
+      FROM users
+    `;
+    const { rows } = await pool.query(query);
+    res.json(rows);
+  } catch (error) {
+    console.error('Error fetching agents:', error);
+    res.status(500).json({ message: 'Failed to fetch agents' });
+  }
 });
 
 // NEW: Add a POST endpoint to create a new agent

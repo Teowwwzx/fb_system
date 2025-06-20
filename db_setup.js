@@ -22,20 +22,21 @@ const createRolesTable = async () => {
 };
 
 const createUsersTable = async () => {
-  const queryText = `
+  const createUsersTableQuery = `
     CREATE TABLE IF NOT EXISTS users (
       user_id SERIAL PRIMARY KEY,
-      username VARCHAR(100) UNIQUE NOT NULL,
-      password_hash VARCHAR(255) NOT NULL, -- Store hashed passwords only!
-      email VARCHAR(255) UNIQUE,
+      username VARCHAR(255) UNIQUE NOT NULL,
+      password_hash VARCHAR(255) NOT NULL,
       role_id INTEGER REFERENCES roles(role_id),
-      status VARCHAR(20) DEFAULT 'active', -- e.g., active, inactive, suspended
-      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-      last_login TIMESTAMPTZ
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+      name VARCHAR(255),
+      status VARCHAR(50) DEFAULT 'active',
+      type VARCHAR(50),
+      last_login_at TIMESTAMP WITH TIME ZONE
     );
   `;
   try {
-    await pool.query(queryText);
+    await pool.query(createUsersTableQuery);
     console.log('Table "users" created or already exists.');
   } catch (err) {
     console.error('Error creating "users" table:', err.stack);
