@@ -6,6 +6,20 @@ const pool = new Pool({
   ssl: process.env.NODE_ENV === 'production' || (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('render.com')) ? { rejectUnauthorized: false } : false, // Enable SSL for Render
 });
 
+const addColumnIfNotExists = async (tableName, columnName, columnDefinition) => {
+  const checkColumnQuery = `
+    SELECT column_name 
+    FROM information_schema.columns 
+    WHERE table_name = $1 AND column_name = $2
+  `;
+  const { rows } = await pool.query(checkColumnQuery, [tableName, columnName]);
+  if (rows.length === 0) {
+    const alterTableQuery = `ALTER TABLE "${tableName}" ADD COLUMN "${columnName}" ${columnDefinition}`;
+    await pool.query(alterTableQuery);
+    console.log(`Column "${columnName}" added to table "${tableName}".`);
+  }
+};
+
 const createRolesTable = async () => {
   const queryText = `
     CREATE TABLE IF NOT EXISTS roles (
@@ -28,18 +42,21 @@ const createUsersTable = async () => {
       username VARCHAR(255) UNIQUE NOT NULL,
       password_hash VARCHAR(255) NOT NULL,
       role_id INTEGER REFERENCES roles(role_id),
-      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-      name VARCHAR(255),
-      status VARCHAR(50) DEFAULT 'active',
-      type VARCHAR(50),
-      last_login_at TIMESTAMP WITH TIME ZONE
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );
   `;
   try {
     await pool.query(createUsersTableQuery);
     console.log('Table "users" created or already exists.');
+
+    // Add new columns if they don't exist, making the script safe for existing tables
+    await addColumnIfNotExists('users', 'name', 'VARCHAR(255)');
+    await addColumnIfNotExists('users', 'status', 'VARCHAR(50) DEFAULT \'active\'');
+    await addColumnIfNotExists('users', 'type', 'VARCHAR(50)');
+    await addColumnIfNotExists('users', 'last_login_at', 'TIMESTAMP WITH TIME ZONE');
+
   } catch (err) {
-    console.error('Error creating "users" table:', err.stack);
+    console.error('Error creating or altering "users" table:', err.stack);
   }
 };
 
