@@ -61,85 +61,124 @@ const mockAgents = [
     }
 ];
 
-const mockActivityLogs = [
-    { id: 1, agent: 'BGM8899', ip: '192.168.1.101', browser: 'Chrome', device: 'Desktop', operation: 'Login', details: 'User logged in successfully', timestamp: '2025-06-08 20:15:30' },
-    { id: 2, agent: 'AGENT007', ip: '203.0.113.45', browser: 'Safari', device: 'Mobile', operation: 'Create Agent', details: 'Created agent [NEW001]', timestamp: '2025-06-08 18:30:00' },
-    { id: 3, agent: 'BGM8899', ip: '192.168.1.101', browser: 'Chrome', device: 'Desktop', operation: 'Update Setting', details: 'Changed daily limit to 1000', timestamp: '2025-06-07 14:00:12' },
-    { id: 4, agent: 'karen', ip: '10.0.0.52', browser: 'Firefox', device: 'Desktop', operation: 'Logout', details: 'User logged out', timestamp: '2025-06-07 11:25:43' },
-    { id: 5, agent: 'James', ip: '203.0.113.45', browser: 'Safari', device: 'Mobile', operation: 'View Report', details: 'Viewed transaction log', timestamp: '2025-06-06 09:05:00' },
-];
+// --- API Endpoints ---
 
-const mockGames = [
-    { 
-        id: 'g1',
-        displayName: 'KISS918', 
-        balance: 472253.45,
-        androidUrl: 'https://yop.1918kiss.com',
-        iosUrl: null, // As seen in the screenshot, iOS can be unavailable
-        robotStatus: '启用' // Enabled
-    },
-    { 
-        id: 'g2',
-        displayName: '918KISS', 
-        balance: 167155.34,
-        androidUrl: 'https://m.918kiss.com/android',
-        iosUrl: 'https://m.918kiss.com/ios',
-        robotStatus: '停用' // Disabled
-    },
-    { 
-        id: 'g3',
-        displayName: 'MEGA888', 
-        balance: 83450.00,
-        androidUrl: 'https://m.mega888.com/android',
-        iosUrl: 'https://m.mega888.com/ios',
-        robotStatus: '启用'
-    }
-];
+// Endpoint for Activity Logs
+app.get('/api/activity-logs', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM activity_logs ORDER BY timestamp DESC');
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching activity logs:', err.message);
+    res.status(500).send('Server Error');
+  }
+});
 
-// NEW: Mock Data for Commissions
-const mockCommissions = [
-    { id: 'c1', agentUsername: 'BGM8899', game: 'KISS918', turnover: 55000.00, commissionRate: 0.005, commissionAmount: 275.00, date: '2025-06-08' },
-    { id: 'c2', agentUsername: 'AGENT007', game: 'MEGA888', turnover: 120000.00, commissionRate: 0.004, commissionAmount: 480.00, date: '2025-06-08' },
-    { id: 'c3', agentUsername: 'BGM8899', game: '918KISS', turnover: 75000.00, commissionRate: 0.005, commissionAmount: 375.00, date: '2025-06-07' },
-    { id: 'c4', agentUsername: 'karen', game: 'KISS918', turnover: 30000.00, commissionRate: 0.003, commissionAmount: 90.00, date: '2025-06-07' },
-    { id: 'c5', agentUsername: 'AGENT007', game: 'KISS918', turnover: 85000.00, commissionRate: 0.004, commissionAmount: 340.00, date: '2025-06-06' },
-    { id: 'c6', agentUsername: 'BGM8899', game: 'MEGA888', turnover: 15000.00, commissionRate: 0.005, commissionAmount: 75.00, date: '2025-06-05' },
-];
+// Endpoint for Games
+app.get('/api/games', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM games');
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching games:', err.message);
+    res.status(500).send('Server Error');
+  }
+});
 
-// NEW: Mock Data for Sub Accounts
-const mockSubAccounts = [
-    { id: 'sa1', username: 'support01', lastLogin: '2025-06-08 11:30:00', remarks: 'Support team member', status: 'Active' },
-    { id: 'sa2', username: 'finance_ops', lastLogin: '2025-06-07 17:00:15', remarks: 'Finance department', status: 'Active' },
-    { id: 'sa3', username: 'test_user', lastLogin: '2025-05-20 10:00:00', remarks: 'For testing purposes', status: 'Paused' },
-];
+// Endpoint for Commissions
+app.get('/api/commissions', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM commissions ORDER BY date DESC');
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching commissions:', err.message);
+    res.status(500).send('Server Error');
+  }
+});
 
-// NEW: Mock Data for Agent Tree View
-const agentTreeData = [
-    {
-        title: 'BGM9001 (You)',
-        key: '0-0',
-        children: [
-            {
-                title: 'AGENT007',
-                key: '0-0-0',
-                children: [
-                    { title: 'SubAgent_A', key: '0-0-0-0' },
-                    { title: 'SubAgent_B', key: '0-0-0-1' },
-                ],
-            },
-            {
-                title: 'karen',
-                key: '0-0-1',
-                children: [
-                    { title: 'SubAgent_C', key: '0-0-1-0' },
-                ],
-            },
-        ],
-    },
-];
+// Endpoint for Sub Accounts
+app.get('/api/sub-accounts', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM sub_accounts');
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching sub-accounts:', err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+// Endpoint for Agent Tree (Static for now, as hierarchy is not in DB)
+app.get('/api/agent-tree', (req, res) => {
+    const treeData = [
+        {
+            title: 'BGM9001 (You)',
+            key: '0-0',
+            children: [
+                {
+                    title: 'AGENT007',
+                    key: '0-0-0',
+                    children: [
+                        { title: 'SubAgent_A', key: '0-0-0-0' },
+                        { title: 'SubAgent_B', key: '0-0-0-1' },
+                    ],
+                },
+                {
+                    title: 'karen',
+                    key: '0-0-1',
+                    children: [
+                        { title: 'SubAgent_C', key: '0-0-1-0' },
+                    ],
+                },
+            ],
+        },
+    ];
+    res.json(treeData);
+});
 
 // --- API Endpoints ---
 // This is a simple GET endpoint to fetch the list of agents
+// Endpoint to create a new agent
+app.post('/api/agents', async (req, res) => {
+  const { username, name, password, status, type } = req.body;
+
+  if (!username || !name || !password) {
+    return res.status(400).json({ message: 'Username, name, and password are required.' });
+  }
+
+  try {
+    // Check if user already exists
+    const userCheck = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+    if (userCheck.rows.length > 0) {
+      return res.status(409).json({ message: 'Username already exists.' });
+    }
+
+    // Hash the password
+    const saltRounds = 10;
+    const passwordHash = await bcrypt.hash(password, saltRounds);
+
+    // Get the agent_manager role_id
+    const roleResult = await pool.query('SELECT role_id FROM roles WHERE role_name = $1', ['agent_manager']);
+    if (roleResult.rows.length === 0) {
+      return res.status(500).json({ message: 'Agent Manager role not found.' });
+    }
+    const agentRoleId = roleResult.rows[0].role_id;
+
+    // Insert the new agent
+    const insertQuery = `
+      INSERT INTO users (username, password_hash, role_id, name, status, type)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING user_id, username, name, status, type, last_login_at;
+    `;
+    const newUser = await pool.query(insertQuery, [username, passwordHash, agentRoleId, name, status, type]);
+
+    res.status(201).json(newUser.rows[0]);
+
+  } catch (error) {
+    console.error('Error creating agent:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 app.get('/api/agents', async (req, res) => {
   try {
     const query = `

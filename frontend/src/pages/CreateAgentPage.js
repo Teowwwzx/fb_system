@@ -1,35 +1,42 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Form, Input, Button, Radio, InputNumber, message } from 'antd';
+import { Form, Input, Button, Radio, InputNumber, message, Spin } from 'antd';
 import axios from 'axios';
 
 const CreateAgentPage = () => {
   const [form] = Form.useForm();
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const onFinish = (values) => {
+  const onFinish = async (values) => {
     console.log('Form values:', values);
+    setLoading(true);
     
-    // Post data to the backend API
-    axios.post('http://localhost:5001/api/agents', values)
-      .then(response => {
+    try {
+      const response = await axios.post('https://fb-system.onrender.com/api/agents', values);
+      
+      if (response.status === 201) {
         message.success('Agent created successfully!');
-        navigate('/agents'); // Redirect to the agent list page after creation
-      })
-      .catch(error => {
-        console.error('Failed to create agent:', error);
-        message.error('Failed to create agent. Please try again.');
-      });
+        navigate('/agents/list'); // Redirect to the agent list page after creation
+      } else {
+        message.error(response.data.message || 'Failed to create agent.');
+      }
+    } catch (error) {
+      console.error('Failed to create agent:', error);
+      message.error(error.response?.data?.message || 'Failed to create agent. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div>
+    <Spin spinning={loading}>
       <h2>创建总代理 (Create General Agent)</h2>
       <Form
         form={form}
         layout="vertical"
         onFinish={onFinish}
-        initialValues={{ status: 'Active', type: '每日' }}
+        initialValues={{ status: 'active', type: 'daily', dailyLimit: 100, onetimeLimit: 100 }}
       >
         <Form.Item
           name="username"
@@ -65,15 +72,15 @@ const CreateAgentPage = () => {
 
         <Form.Item name="status" label="状态 (Status)">
           <Radio.Group>
-            <Radio.Button value="Active">活泼</Radio.Button>
-            <Radio.Button value="Paused">暂停</Radio.Button>
+            <Radio.Button value="active">活泼</Radio.Button>
+            <Radio.Button value="inactive">暂停</Radio.Button>
           </Radio.Group>
         </Form.Item>
         
         <Form.Item name="type" label="种类 (Type)">
           <Radio.Group>
-            <Radio.Button value="每日">每日</Radio.Button>
-            <Radio.Button value="一次">一次</Radio.Button>
+            <Radio.Button value="daily">每日</Radio.Button>
+            <Radio.Button value="onetime">一次</Radio.Button>
           </Radio.Group>
         </Form.Item>
 
@@ -83,7 +90,7 @@ const CreateAgentPage = () => {
           </Button>
         </Form.Item>
       </Form>
-    </div>
+    </Spin>
   );
 };
 
