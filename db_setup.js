@@ -1,5 +1,6 @@
 require('dotenv').config();
 const { Pool } = require('pg');
+const bcrypt = require('bcrypt');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -60,6 +61,43 @@ const createUsersTable = async () => {
   }
 };
 
+const seedAdminUser = async () => {
+  const username = 'admin';
+  const password = 'password'; // Use a more secure password in a real production environment
+
+  try {
+    // Check if the admin user already exists
+    const userCheck = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+    if (userCheck.rows.length > 0) {
+      console.log(`User "${username}" already exists.`);
+      return;
+    }
+
+    // Hash the password
+    const saltRounds = 10;
+    const passwordHash = await bcrypt.hash(password, saltRounds);
+
+    // Get the admin role_id
+    const roleResult = await pool.query('SELECT role_id FROM roles WHERE role_name = $1', ['admin']);
+    if (roleResult.rows.length === 0) {
+      console.error('Admin role not found. Cannot seed admin user.');
+      return;
+    }
+    const adminRoleId = roleResult.rows[0].role_id;
+
+    // Insert the admin user
+    const insertQuery = `
+      INSERT INTO users (username, password_hash, role_id, name, status, type)
+      VALUES ($1, $2, $3, $4, $5, $6)
+    `;
+    await pool.query(insertQuery, [username, passwordHash, adminRoleId, 'Administrator', 'active', 'admin']);
+    console.log(`Admin user "${username}" created successfully.`);
+
+  } catch (err) {
+    console.error('Error seeding admin user:', err.stack);
+  }
+};
+
 const seedRoles = async () => {
   const rolesToSeed = ['admin', 'agent_manager', 'sub_account_user', 'viewer'];
   let seededCount = 0;
@@ -87,6 +125,7 @@ const initializeDatabase = async () => {
     await createRolesTable();
     await createUsersTable();
     await seedRoles();
+    await seedAdminUser();
     console.log('Database initialization process completed.');
   } catch (err) {
     console.error('Error during database initialization:', err.stack);
