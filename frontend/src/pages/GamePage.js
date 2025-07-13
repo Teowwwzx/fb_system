@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Input, Radio, Button, Tag, Tooltip, message, Spin, Card } from 'antd';
 import { SearchOutlined, SyncOutlined, CopyOutlined } from '@ant-design/icons';
-import QRCode from 'qrcode.react';
+import { QRCodeSVG } from 'qrcode.react';
 
 const GamesPage = () => {
   const [games, setGames] = useState([]);
@@ -14,7 +14,7 @@ const GamesPage = () => {
   const fetchGames = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/data/games');
+      const response = await fetch('/api/games');
       if (!response.ok) {
         throw new Error('Failed to fetch games data.');
       }
@@ -62,13 +62,13 @@ const GamesPage = () => {
       title: '二维码 (Android)', // QR Code (Android)
       dataIndex: 'android_url',
       key: 'android_url',
-      render: (url) => url ? <QRCode value={url} size={64} /> : '-',
+      render: (url) => url ? <QRCodeSVG value={url} size={64} /> : '-',
     },
     {
       title: '二维码 (iOS)', // QR Code (iOS)
       dataIndex: 'ios_url',
       key: 'ios_url',
-      render: (url) => url ? <QRCode value={url} size={64} /> : '-',
+      render: (url) => url ? <QRCodeSVG value={url} size={64} /> : '-',
     },
     {
       title: '余额', // Balance

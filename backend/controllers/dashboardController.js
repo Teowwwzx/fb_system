@@ -36,34 +36,48 @@ exports.searchUser = async (req, res) => {
 };
 
 // Create a new game account for a user
-exports.createGameAccount = async (req, res) => {
-    const { username, game_id, phone_number, amount } = req.body;
-    
+exports.createGameAccounts = async (req, res) => {
+    const { user_id, game_ids } = req.body;
+
+    if (!user_id || !game_ids || !Array.isArray(game_ids) || game_ids.length === 0) {
+        return res.status(400).json({ error: 'User ID and a list of game IDs are required.' });
+    }
+
+    const client = await pool.connect();
     try {
-        const userResult = await pool.query('SELECT user_id FROM users WHERE username = $1', [username]);
-        if (userResult.rows.length === 0) {
-            return res.status(404).json({ error: 'User to assign account to not found' });
+        await client.query('BEGIN'); // Start a transaction
+
+        const createdAccounts = [];
+        for (const game_id of game_ids) {
+            // Generate a unique Game ID
+            const gameResult = await client.query('SELECT name FROM games WHERE game_id = $1', [game_id]);
+            if (gameResult.rows.length === 0) continue; // Skip if game doesn't exist
+
+            const gamePrefix = gameResult.rows[0].name.substring(0, 3).toUpperCase();
+            const randomNum = Math.floor(10000 + Math.random() * 90000);
+            const newGameAccountId = `${gamePrefix}-${randomNum}`;
+
+            const newAccount = await client.query(
+                'INSERT INTO user_game_accounts (user_id, game_id, game_account_id) VALUES ($1, $2, $3) RETURNING game_account_id',
+                [user_id, game_id, newGameAccountId]
+            );
+            createdAccounts.push({ 
+                game_name: gameResult.rows[0].name, 
+                game_account_id: newAccount.rows[0].game_account_id 
+            });
         }
-        const userId = userResult.rows[0].user_id;
 
-        // Generate a unique Game ID (simple example)
-        const gameResult = await pool.query('SELECT name FROM games WHERE game_id = $1', [game_id]);
-        const gamePrefix = gameResult.rows[0].name.substring(0, 3).toUpperCase();
-        const randomNum = Math.floor(10000 + Math.random() * 90000);
-        const newGameAccountId = `${gamePrefix}-${randomNum}`;
-
-        const newAccount = await pool.query(
-            'INSERT INTO user_game_accounts (user_id, game_id, game_account_id) VALUES ($1, $2, $3) RETURNING *',
-            [userId, game_id, newGameAccountId]
-        );
-
-        // You might also create a transaction record here for the 'amount'
-        // ...
-
-        res.status(201).json(newAccount.rows[0]);
+        await client.query('COMMIT'); // Commit the transaction
+        res.status(201).json({
+            message: 'Game accounts created successfully!',
+            accounts: createdAccounts
+        });
 
     } catch (err) {
+        await client.query('ROLLBACK'); // Roll back on error
         console.error(err.message);
         res.status(500).send('Server Error');
+    } finally {
+        client.release();
     }
 };

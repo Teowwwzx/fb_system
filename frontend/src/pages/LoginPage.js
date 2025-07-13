@@ -3,7 +3,7 @@ import { Form, Input, Button, Typography, message } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from './context/AuthContext';
 
 const { Title } = Typography;
 
@@ -15,15 +15,15 @@ const LoginPage = () => {
     console.log('Attempting login with:', values); // Log the values
 
     try {
-      const response = await axios.post('/api/login', values);
+      const response = await axios.post('http://localhost:5001/api/login', values);
       if (response.data.token) {
         login(response.data); // Use the context's login function
         message.success('Login successful!');
         navigate('/dashboard'); // Redirect to the dashboard
       }
     } catch (error) {
-      message.error('Invalid username or password.');
-    }
+      const errorMessage = error.response?.data?.message || 'Invalid username or password.';
+      message.error(errorMessage);    }
   };
 
   return (
