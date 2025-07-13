@@ -5,10 +5,7 @@ const { Title, Text } = Typography;
 const { Option } = Select;
 
 const LanguagePage = () => {
-    const [language, setLanguage] = useState('English');
-
     const handleChange = (value) => {
-        setLanguage(value);
         message.success(`Language changed to ${value}`);
     };
 

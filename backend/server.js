@@ -9,9 +9,7 @@ const { initializeDatabase } = require('./db_setup');
 const pool = require('./db'); // Import the shared pool
 
 // --- Route Imports ---
-const authRoutes = require('./routes/auth');
-const agentRoutes = require('./routes/agents');
-const dataRoutes = require('./routes/data');
+const apiRoutes = require('./routes/index');
 
 // --- Express App Setup ---
 const app = express();
@@ -42,9 +40,7 @@ app.get('/', (req, res) => {
     res.status(200).json({ message: 'Welcome to the FB System API. The service is up and running.' });
 });
 
-app.use('/api', authRoutes);
-app.use('/api/agents', agentRoutes);
-app.use('/api', dataRoutes); // Mounts all data routes under /api
+app.use('/api', apiRoutes);
 
 // --- Server Start ---
 async function startServer() {

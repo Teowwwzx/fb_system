@@ -3,34 +3,26 @@ import { Form, Input, Button, Typography, message } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const { Title } = Typography;
 
-// Use the Render backend URL
-const API_URL = 'https://fb-system.onrender.com/api';
-
 const LoginPage = () => {
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const onFinish = async (values) => {
-    try {
-      const response = await axios.post(`${API_URL}/login`, {
-        username: values.username,
-        password: values.password,
-      });
+    console.log('Attempting login with:', values); // Log the values
 
-      if (response.status === 200) {
+    try {
+      const response = await axios.post('/api/login', values);
+      if (response.data.token) {
+        login(response.data); // Use the context's login function
         message.success('Login successful!');
-        // Here you would typically save the token, e.g., in localStorage
-        // localStorage.setItem('user', JSON.stringify(response.data));
         navigate('/dashboard'); // Redirect to the dashboard
-      } 
-    } catch (error) {
-      let errorMessage = 'Login failed. Please try again.';
-      if (error.response && error.response.status === 401) {
-        errorMessage = 'Invalid username or password.';
       }
-      message.error(errorMessage);
+    } catch (error) {
+      message.error('Invalid username or password.');
     }
   };
 

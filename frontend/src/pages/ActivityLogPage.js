@@ -5,7 +5,6 @@ import * as XLSX from 'xlsx'; // Import the Excel library
 import dayjs from 'dayjs'; // Ant Design uses dayjs for dates
 
 const { RangePicker } = DatePicker;
-const { Option } = Select;
 
 const ActivityLogPage = () => {
     const [form] = Form.useForm();

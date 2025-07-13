@@ -1,5 +1,6 @@
 // backend/controllers/authController.js
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const pool = require('../db');
 
 // Login
@@ -18,14 +19,40 @@ const loginUser = async (req, res) => {
         if (!isMatch) {
             return res.status(401).json({ message: 'Invalid username or password' });
         }
-        res.status(200).json({
-            message: 'Login successful',
+
+        // --- THIS IS THE NEW, CRUCIAL PART ---
+        // Create the payload for the token
+        const payload = {
             user: {
-                user_id: user.user_id,
+                id: user.user_id,
                 username: user.username,
-                role: user.role_name
+                role: user.role_name // Include the role in the token
             }
-        });
+        };
+
+        // Sign the token with a secret key from your .env file
+        jwt.sign(
+            payload,
+            process.env.JWT_SECRET, // Make sure to set this in your backend/.env file!
+            { expiresIn: '8h' },   // Token will be valid for 8 hours
+            (err, token) => {
+                if (err) throw err;
+                // Send the token and user info back to the frontend
+                res.status(200).json({
+                    token,
+                    user: payload.user
+                });
+            }
+        );
+
+        // res.status(200).json({
+        //     message: 'Login successful',
+        //     user: {
+        //         user_id: user.user_id,
+        //         username: user.username,
+        //         role: user.role_name
+        //     }
+        // });
     } catch (error) {
         console.error('Login error:', error);
         res.status(500).json({ message: 'Server error during login' });

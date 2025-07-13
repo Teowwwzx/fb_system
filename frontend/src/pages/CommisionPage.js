@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { Form, DatePicker, Input, Button, Space, Table, Card, Row, Col, Statistic, message } from 'antd';
+import { Form, DatePicker, Input, Button, Table, Card, Row, Col, Statistic, message } from 'antd';
 import axios from 'axios';
-import dayjs from 'dayjs';
 
 const { RangePicker } = DatePicker;
 

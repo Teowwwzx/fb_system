@@ -4,7 +4,6 @@ import { Table, Tag, Space, Input, Radio, Button } from 'antd';
 import { PlusOutlined } from '@ant-design/icons'; // Import icon
 import axios from 'axios';
 
-const { Search } = Input;
 
 const AgentListPage = () => {
     const [agents, setAgents] = useState([]);
@@ -16,14 +15,13 @@ const AgentListPage = () => {
         axios.get('http://localhost:5001/api/agents')
             .then(response => {
                 setAgents(response.data); // Store the data in state
-                console.log('Agents fetched:', agents);
                 setLoading(false); // Stop the loading indicator
             })
             .catch(error => {
                 console.error("There was an error fetching the agents!", error);
                 setLoading(false); // Also stop loading on error
             });
-    }, []); // The empty array means this effect runs only once
+    }, []);
 
     // Define the columns for the table
     const columns = [
